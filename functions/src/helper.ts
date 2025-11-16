@@ -1,6 +1,7 @@
 import axios from "axios";
+import { ExtractTextPageWiseResult, SlidesDataOnlyText } from "./types";
 
-export const generatePrompt = (pdfText: string) => {
+export const generatePrompt = (pdfTextContent: ExtractTextPageWiseResult[]) => {
   return (
     `
   You are a presentation expert. Convert this document into a structured JSON presentation.
@@ -13,16 +14,16 @@ export const generatePrompt = (pdfText: string) => {
   
   {
     "slides": [
-      { "title": "Title", "bullets": ["a", "b", "c"] }
+      { "page": 1, "title": "Title", "bullets": ["a", "b", "c"] }
     ]
   }
   
   Document:
-  ${pdfText.substring(0, 30000)}`
+  ${pdfTextContent.map((item) => `Page ${item.page}: ${item.text}`).join("\n")}`
   )
 }
 
-export const callGemini = async (prompt: string, apiKey: string) => {
+export const callGemini = async (prompt: string, apiKey: string): Promise<SlidesDataOnlyText> => {
   try {
     const model = "gemini-2.5-flash";
     const geminiResponse = await axios.post(

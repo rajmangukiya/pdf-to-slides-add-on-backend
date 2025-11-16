@@ -2,8 +2,9 @@ import { onRequest } from 'firebase-functions/v2/https';
 import { setGlobalOptions } from 'firebase-functions/v2';
 import { defineSecret } from 'firebase-functions/params';
 import { callGemini, generatePrompt } from './helper';
+import { extractImagesFromPdf, extractTextPageWise, mergeTextAndImages } from './helper/pdf';
 
-const pdfParse = require('pdf-parse');
+// const pdfParse = require('pdf-parse');
 
 setGlobalOptions({
     timeoutSeconds: 3000,
@@ -38,7 +39,7 @@ export const convertPdfToSlides = onRequest(
 
         try {
 
-            const pdfBase64 = request.body.data;
+            const pdfBase64 = request.body.data || request.body;
 
             if (!pdfBase64) {
                 response.status(400).json({
@@ -59,33 +60,40 @@ export const convertPdfToSlides = onRequest(
 
             // Extract PDF text
             const pdfBuffer = Buffer.from(pdfBase64, "base64");
-            const pdfData = await pdfParse(pdfBuffer);
-            const pdfText = pdfData.text;
 
-            if (!pdfText || pdfText.trim().length < 50) {
-                response.status(500).json({
-                    success: false,
-                    error: "Could not extract enough text from PDF: Found less than 50 characters",
-                });
-                return;
-            }
+            const images = await extractImagesFromPdf(pdfBuffer);
+            const pdfTextContent = await extractTextPageWise(pdfBuffer);
 
             // AI processing
-            const prompt = generatePrompt(pdfText);
+            const prompt = generatePrompt(pdfTextContent);
 
             // Call Gemini API
-            const slidesData = await callGemini(prompt, apiKey);
+            const slidesDataText = await callGemini(prompt, apiKey);
+
+            const slidesData = mergeTextAndImages(slidesDataText, images);
 
             response.status(200).json({
                 success: true,
                 data: slidesData,
                 metadata: {
                     model: "gemini-2.5-flash",
-                    pagesProcessed: pdfData.numpages,
-                    slidesGenerated: slidesData.slides.length,
+                    pagesProcessed: pdfTextContent.length,
+                    slidesGenerated: slidesData.length,
                 },
             });
+
+            // response.status(200).json({
+            //     success: true,
+            //     data: pdfWithoutImages,
+            //     images: images,
+            //     metadata: {
+            //         model: "gemini-2.5-flash",
+            //         pagesProcessed: 10,
+            //         slidesGenerated: 10,
+            //     },
+            // });
         } catch (error: any) {
+            console.error(error);
             response.status(500).json({
                 success: false,
                 error: error.message,

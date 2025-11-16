@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.callGemini = exports.generatePrompt = void 0;
 const axios_1 = __importDefault(require("axios"));
-const generatePrompt = (pdfText) => {
+const generatePrompt = (pdfTextContent) => {
     return (`
   You are a presentation expert. Convert this document into a structured JSON presentation.
   
@@ -17,12 +17,12 @@ const generatePrompt = (pdfText) => {
   
   {
     "slides": [
-      { "title": "Title", "bullets": ["a", "b", "c"] }
+      { "page": 1, "title": "Title", "bullets": ["a", "b", "c"] }
     ]
   }
   
   Document:
-  ${pdfText.substring(0, 30000)}`);
+  ${pdfTextContent.map((item) => `Page ${item.page}: ${item.text}`).join("\n")}`);
 };
 exports.generatePrompt = generatePrompt;
 const callGemini = async (prompt, apiKey) => {
