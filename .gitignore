@@ -1,0 +1,17 @@
+# Logs
+*.log
+
+# Firebase cache
+.firebase/
+
+# Dependency directories
+node_modules/
+
+# dotenv environment variables file
+.env
+
+# Compiled JavaScript files
+lib/**/*.js
+lib/**/*.js.map
+
+*.local
